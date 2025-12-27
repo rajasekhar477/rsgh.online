@@ -1,0 +1,63 @@
+name: CI/CD Pipeline
+
+# Trigger on push to main and on pull requests
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  # Job 1: Quality Checks
+  quality-checks:
+    runs-on: ubuntu-latest
+    name: Code Quality & Validation
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Validate HTML
+      uses: Cyb3r-Jak3/html5validator-action@v7.2.0
+      with:
+        root: ./
+        
+    - name: Check for broken links
+      uses: technote-space/broken-link-checker-action@v2
+      with:
+        TARGET: '*.html'
+        EXCLUDE_PATTERNS: 'localhost'
+        
+    - name: Spell check
+      uses: rojopolis/spellcheck-github-actions@0.36.0
+      with:
+        source_files: '*.html *.md'
+        task_name: Markdown
+
+  # Job 2: Deploy to GitHub Pages  
+  deploy:
+    runs-on: ubuntu-latest
+    name: Deploy to GitHub Pages
+    needs: quality-checks
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+      
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+      
+    - name: Setup Pages
+      uses: actions/configure-pages@v4
+      
+    - name: Upload artifact
+      uses: actions/upload-pages-artifact@v3
+      with:
+        path: '.'
+        
+    - name: Deploy to GitHub Pages
+      id: deployment
+      uses: actions/deploy-pages@v4
